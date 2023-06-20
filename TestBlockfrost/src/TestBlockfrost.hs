@@ -11,7 +11,7 @@ import Blockfrost.Client.Types
 import Blockfrost.API
 import qualified Data.Text as T
 import System.Process
-import Network.HTTP.Client (createCookieJar)
+import System.Exit (exitWith, ExitCode (ExitFailure, ExitSuccess))
 --import Data.Text.Internal
 
 
@@ -19,7 +19,7 @@ import Network.HTTP.Client (createCookieJar)
 funzione :: IO  [AddressUtxo]
 funzione  = do
   print "test de fonctionnment"
-  var <- projectFromEnv
+  _ <- projectFromEnv
   let totextAddrExp = T.pack "addr_test1qrfvl09vznmcqth7mdrvhlvj8rwyx4x22k7kgs7st7e9cmgeswxsf9fae0wj4e3st46hung22dfgaqytuw78z5el86cqrxs0d8"
       something = Address totextAddrExp
   xs <- getAddressUtxos something
@@ -65,43 +65,54 @@ testSendAdaTo :: String -> String ->  Int -> IO ()
 testSendAdaTo addrExpediteur addrDestinataire montant = do
   -- je definis mon environnement
   --monEnv <- projectFromFile "pathToMonToken.txt"
-  monEnv <- projectFromEnv
+  _ <- projectFromEnv
   -- conversion vers le type Text
   let totextAddrExp = T.pack addrExpediteur
-      totextAddrDest = T.pack addrDestinataire
       -- construction du type Address avec le constructeur Address
       toAddressExp = Address totextAddrExp  -- je pouvais aussi utiliser la fonction mkAddress en lui passant un type Text
       --toAddressDest = Address totextAddrDest
   -- j'interroge cardano pour avoir les infos sur mon wallet 
-  (firstUtxo:listOfUtxos) <- getAddressUtxos toAddressExp
+  (firstUtxo:_) <- getAddressUtxos toAddressExp
   -- je recupere le hash de la tx dont provient mon utxo info, et l'index
   let someTxHash = _addressUtxoTxHash firstUtxo -- le hash de la tx dont provient l'utxo
       someIndex = _addressUtxoOutputIndex firstUtxo
       idUtxoToUse = T.unpack (unTxHash someTxHash) ++ "#" ++ show someIndex
       toStringMontant = show montant
       utxoOut = addrDestinataire ++ "+" ++ toStringMontant
+  --print firstUtxo
   print idUtxoToUse
   -- je construit les process : build , sign , submit
-  let shellTx = proc "cardano-cli" ["transaction", "build", "--socket-path", "/home/nkalla/cardano-src/cardano-node/config_preprod/db/node.socket",
-          "--babbage-era", "--testnet-magic", "1", "--tx-in", idUtxoToUse, "--tx-out", utxoOut, "--change-address", 
-          addrExpediteur, "--out-file", "testInCode-tx.raw"]
+  let shellCommand = shell "export CARDANO_NODE_SOCKET_PATH=/home/nkalla/cardano-src/cardano-node/config_preprod/db/node.socket"
 
-      shellCommand = shell "export CARDANO_NODE_SOCKET_PATH=/home/nkalla/cardano-src/cardano-node/config_preprod/db"
+      shellTx = proc "cardano-cli" ["transaction", "build", "--socket-path", "/home/nkalla/cardano-src/cardano-node/config_preprod/db/node.socket",
+          "--babbage-era", "--testnet-magic", "1", "--tx-in", idUtxoToUse, "--tx-out", utxoOut, "--change-address", 
+          addrExpediteur, "--out-file", "./testInCode-tx.raw"]
 
       shellSign = proc "cardano-cli" ["transaction", "sign", "--signing-key-file", "/home/nkalla/monWallet/privateKey.skey", "--testnet-magic", "1",
-        "--tx-body-file", "testInCode-tx.raw", "--out-file", "testInCode-tx.signed"]
+        "--tx-body-file", "./testInCode-tx.raw", "--out-file", "./testInCode-tx.signed"]
 
-      shellSubmit = proc "cardano-cli" ["transaction", "submit", "--tx-file", "testInCode-tx.signed", "--testnet-magic", "1"]
-  -- je commence par executer le process d'export comme dans mon model ci haut
+      shellSubmit = proc "cardano-cli" ["transaction", "submit", "--tx-file", "./testInCode-tx.signed", "--testnet-magic", "1"]
   (_,_,_,processExport) <- createProcess shellCommand
-  (_,_,_,processHandleTx) <- createProcess shellTx
-  (_,_,_,processHandleSign) <- createProcess shellSign
-  (_,_,_,processHandleSubmit) <- createProcess shellSubmit
-  _ <- waitForProcess processExport
-  _ <- waitForProcess processHandleTx
-  _ <- waitForProcess processHandleSign
-  _ <- waitForProcess processHandleSubmit
-  return ()
+  exitCodeExport <- waitForProcess processExport
+  case exitCodeExport of
+    ExitFailure _  -> print "le processus d'export est en cours !"
+    ExitSuccess  -> do
+      (_,_,_,processHandleTx) <- createProcess shellTx
+      exitCodeTx <- waitForProcess processHandleTx
+      case exitCodeTx of
+        ExitFailure _ -> print "le processus de transaction est en cours !"
+        ExitSuccess -> do
+          (_,_,_,processHandleSign) <- createProcess shellSign
+          exitCodeSign <- waitForProcess processHandleSign
+          case exitCodeSign of
+            ExitFailure _  -> print "la signature de la tx est en cours !"
+            ExitSuccess  -> do
+              (_,_,_,processHandleSubmit) <- createProcess shellSubmit
+              exitCodeSubmit <- waitForProcess processHandleSubmit
+              case exitCodeSubmit of 
+                ExitFailure _  -> print "le submit est en cours !!"
+                ExitSuccess-> do print "ok transacation reussite"
+
 
 
 
