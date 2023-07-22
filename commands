@@ -419,27 +419,31 @@ construit un datum de type : MisteryDatum
 
 
 
+
+
+
 ------------------------------------== test du code offchain du script de la tontine ==-----------------------------------
 
--- j'ai monte un projet cabal, dans lequel j'ai copié le projet Utilities  de plutus pioner program
--- je vais utiliser le moduler System.Process pour appeler le cli dans le code 
--- il ne faut pas oublier de faire :set -XOverloadedStrings avant de taper les commandes pour contruire les donnees 
+-- j'ai monte un projet cabal, dans lequel j'ai copié le projet Utilities  de plutus pioner program.
+-- j'ai cree le fichier cabal.project dans lequel j'ai copie le cabal.project de plutus pionner programm, et j'ai supprime
+tous les Week et laisser seulement utilities le (.) dans Packages.
+-- je vais utiliser le moduler System.Process pour appeler le cli dans le code.
+-- il ne faut pas oublier de faire :set -XOverloadedStrings avant de taper les commandes pour contruire les donnees ( redeemer et datum) dans vscode. 
 -- pour indiquer le chemin a saveDataToFile pour sauvegarder le redeemer et le datum, il faut passer le chemin absolu 
-	exemple : /home/nkalla/Documents/testData/datum.json
+	exemple : /home/nkalla/Documents/testData/datum.json.
 	
--- la premiere tx est pour fermer la tontine, cad changer le datum dans le wallet du script qui n'est qu'une tx normal de paiement.
-	entre deux scripts 
--- pour ouvrir la tontine il faut que le status soit ferme
+-- la premiere tx est pour fermer la tontine, cad mettre un utxo avant un datum contenant CLOSE dans le wallet du script. en realite c'est un tx normale entre deux scripts. 
+-- pour ouvrir la tontine il faut que le status soit ferme ( c'est la logique de notre script).
 
----------------------------------------- on construit la tx --------------------------------------
+---------------------------------------- on construit la tx pour fermer la reunion --------------------------------------
 
 cardano-cli transaction build --tx-in 87e7655725d701b708909bf5db8e652e53acc18a66e7cc5a9cb8f8ffa3b7d3e6#1 --tx-out $(cat /home/nkalla/tontineAddr)+1500000  --tx-out-inline-datum-file /home/nkalla/Documents/testData/datum2.json --change-address $(cat /home/nkalla/monWallet/raoul.addr) --testnet-magic 1 --out-file changeStatus-unsigned
 
-commentaires : 
-	-- en entree de la tx  il y a le utxo du wallet dans lequel on va retirer les 1500000 lovelaces
-	-- on construit un datum avec la fonction savaDataToFile 
+1 - commentaires : 
+	-- en entree de la tx  il y a le utxo du wallet ( de celui qui fait la tx) dans lequel on va retirer les 1500000 lovelaces.
+	-- on construit un datum avec la fonction savaDataToFile qui est dans le code onchain.
 	
-resultat : 
+2 - resultat : 
 Estimated transaction fee: Lovelace 169637
 
 --------------------------------------------- on signe la tx -------------------------------
@@ -452,13 +456,194 @@ cardano-cli transaction submit --tx-file changeStatus-signed --testnet-magic 1
 Transaction successfully submitted
 
 
----------------------------------------------- quand je fais le query utxo -------------------------------------
+-------------------------------- quand je fais le query utxo de l'addresse du script  -------------------------------------
 
 cardano-cli query utxo --testnet-magic 1 --address $(cat /home/nkalla/tontineAddr)
                            TxHash                                 TxIx        Amount
 --------------------------------------------------------------------------------------
 87e7655725d701b708909bf5db8e652e53acc18a66e7cc5a9cb8f8ffa3b7d3e6     0        10000000 lovelace + TxOutDatumNone
 e30fbb11283895de8422e7b938289077b84d839c7356b49bb04916faee5a1437     0        1500000 lovelace + TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInBabbageEra (HashableScriptData "\216y\159\216y\159ECLOSE\255\216y\159Ipresident\255\216y\159IpresidentEraoulE12236\255\255" (ScriptDataConstructor 0 [ScriptDataConstructor 0 [ScriptDataBytes "CLOSE"],ScriptDataConstructor 0 [ScriptDataBytes "president"],ScriptDataConstructor 0 [ScriptDataBytes "president",ScriptDataBytes "raoul",ScriptDataBytes "12236"]]))
+
+
+--------------------- la tontine est fermee, essayons de tontiner pour voir le message qui s'affiche ---------------
+
+1 - on construit une tx pour tontiner :
+
+cardano-cli transaction build --tx-in e30fbb11283895de8422e7b938289077b84d839c7356b49bb04916faee5a1437#1 --tx-in e30fbb11283895de8422e7b938289077b84d839c7356b49bb04916faee5a1437#0 --tx-in-inline-datum-present --tx-in-script-file /home/nkalla/Documents/tontine.plutus --tx-in-redeemer-file /home/nkalla/Documents/testData/tontineRedeemer.json --tx-in-collateral e30fbb11283895de8422e7b938289077b84d839c7356b49bb04916faee5a1437#1 --tx-out $(cat /home/nkalla/tontineAddr)+1500000 --tx-out-inline-datum-file /home/nkalla/Documents/testData/datum.json --tx-out $(cat /home/nkalla/tontineAddr)+100000000 --change-address $(cat /home/nkalla/monWallet/raoul.addr) --testnet-magic 1 --out-file tontine-unsigned
+
+-- le redeemer sert a indiquer l'action qu'on souhaite effectuer : tontiner, fermer ou ouvrir ,...
+-- en entree de la tx, il faut un utxo du script pour qu'il puisse se declencher et un utxo de celui qui effectue la tx cad celui qui veut tontiner. 
+	rmq : il faut mettre le utxo du script qui a le datum CLOSE.
+-- le --tx-in-inline-datum-present : permet de signaler que le utxo qui precede contient un datum.
+-- le collateral est pris dans le utxo de celui qui effectue la tx, celui qui souhaite tontiner 
+-- en sortie de la tx il y a premierement  un utxo pour l'addresse du script dans lequel on met le nouveau datum, car l'ancien a ete consommé
+-- --tx-out $(cat /home/nkalla/tontineAddr)+1500000 --tx-out-inline-datum-file /home/nkalla/Documents/testData/datum.json : 
+ceci veut dire que le datum (datum.json)  est inseré dans le utxo (qui vaut 1500000) qui va dans tontineAdrr. en fait quand on veut mettre un datum dans une addresse en sortie d'une tx c'est comme ca qu'on procede.
+-- en sortie de la tx on a deuxiemement, le utxo de la tontine, qui vaut le montant de tontine qui est de 100 tAda, dans lequel on peut mettre un datum ou pas!, dans ce cas ci je n'ai pas mis.
+-- en fin on envoie le reste a l'addresse de celui qui tontine.
+
+2 - resultat : 
+
+Command failed: transaction build  Error: The following scripts have execution failures:
+the script for transaction input 0 (in the order of the TxIds) failed with: 
+The Plutus script evaluation failed: An error has occurred:  User error:
+The machine terminated because of an error, either from a built-in function or from an explicit use of 'error'.
+Script debugging logs: Merci de verifier que vous avez suffisament de fond ou que la tontine est deja ouverte
+PT5
+
+commentaire du resultat : c'est normal d'avoir ce resultat car on essaye de tontiner dans une reunion qui est fermee. maintenant on va ouvrir la reunion et essayer de tontiner a nouveau.
+
+-------------------------------- tx pour ouvrir la reunion ----------------------
+
+la logique du script dit que pour ouvrir la reunion il faut etre parmi ceux qui ont le pouvoir de le faire, cette logique c'est le paramsData qu'on a utilise pour generer le fichier tontine.plutus de notre script. dans cette variable de type ParamsData on a indique la liste des hash de ceux qui peuvent ouvrir la tontine, le montant minimal, la liste des hash des membres de la reunion, etc ... 
+voici le paramsData que j'ai utilise pour genere tontine.plutus : 
+
+someParams = ParamsData 100 [PubKeyHash "91dbe3d70568b1ada2b0f059a8394dffb8fa632214c42c66f87fde95", PubKeyHash "2fd3140fe8c8c05556b041cbab2132b7b0070ef603b9098368609d8a"] [PubKeyHash "91dbe3d70568b1ada2b0f059a8394dffb8fa632214c42c66f87fde95", PubKeyHash "2fd3140fe8c8c05556b041cbab2132b7b0070ef603b9098368609d8a"] ["raoul", "wimpro"]
+
+
+et donc pour ouvrir la reunion on change juste le datum, et on met a OPEN
+
+1 - premierement construisons un datum avec OPEN 
+
+-- voila l'etat de l'addresse du script : il est CLOSE
+
+cardano-cli query utxo --testnet-magic 1 --address $(cat /home/nkalla/tontineAddr)
+                           TxHash                                 TxIx        Amount
+--------------------------------------------------------------------------------------
+87e7655725d701b708909bf5db8e652e53acc18a66e7cc5a9cb8f8ffa3b7d3e6     0        10000000 lovelace + TxOutDatumNone
+e30fbb11283895de8422e7b938289077b84d839c7356b49bb04916faee5a1437     0        1500000 lovelace + TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInBabbageEra (HashableScriptData "\216y\159\216y\159ECLOSE\255\216y\159Ipresident\255\216y\159IpresidentEraoulE12236\255\255" (ScriptDataConstructor 0 [ScriptDataConstructor 0 [ScriptDataBytes "CLOSE"],ScriptDataConstructor 0 [ScriptDataBytes "president"],ScriptDataConstructor 0 [ScriptDataBytes "president",ScriptDataBytes "raoul",ScriptDataBytes "12236"]]))
+
+-- je construit mon datum :
+
+datumOPen = TontineDatum (OperationType "OPEN") (Transactor "president") (Member "president" "raoul" "12236")
+
+commentaire : "raoul" est parmi les membres de la reunion. si on met un nom qui n'est pas dans la liste des membres ca ne marchera pas.
+	      "preseident" est un identifiant, on pouvait mettre autre chose
+	      
+-- on appelle la fonction savaDataToFile avec notre datumOpen, pour mettre ca sous forme de json : 
+
+savaDataToFile "/home/nkalla/Documents/testData/datumOpen.json" datumOPen
+
+resultat de savaDataToFile : 
+
+{
+    "constructor": 0,
+    "fields": [
+        {
+            "constructor": 0,
+            "fields": [
+                {
+                    "bytes": "4f50454e"
+                }
+            ]
+        },
+        {
+            "constructor": 0,
+            "fields": [
+                {
+                    "bytes": "707265736964656e74"
+                }
+            ]
+        },
+        {
+            "constructor": 0,
+            "fields": [
+                {
+                    "bytes": "707265736964656e74"
+                },
+                {
+                    "bytes": "72616f756c"
+                },
+                {
+                    "bytes": "3132323336"
+                }
+            ]
+        }
+    ]
+}
+
+2 - notre datum etant deja crée, on construit la tx pour ouvrir la tontine : 
+
+cardano-cli transaction build --tx-in e30fbb11283895de8422e7b938289077b84d839c7356b49bb04916faee5a1437#1 --tx-out $(cat /home/nkalla/tontineAddr)+1500000  --tx-out-inline-datum-file /home/nkalla/Documents/testData/datumOpen.json --change-address $(cat /home/nkalla/monWallet/raoul.addr) --testnet-magic 1 --out-file openTontine-unsigned
+
+
+
+
+
+
+
+
+----------------------------------------------------------------------------------------------------------------------
+--------------------------- c'est un ECHEC, je refais un autre ParamsData ---------------------------------------------
+------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+newParams = ParamsData 100000000 ["91dbe3d70568b1ada2b0f059a8394dffb8fa632214c42c66f87fde95", "2fd3140fe8c8c05556b041cbab2132b7b0070ef603b9098368609d8a"] ["91dbe3d70568b1ada2b0f059a8394dffb8fa632214c42c66f87fde95", "2fd3140fe8c8c05556b041cbab2132b7b0070ef603b9098368609d8a"] ["raoul", "wimpro"]
+
+ce qui me donne une nouvelle addresse du script : 
+addr_test1wpwgwjpne75jk3w9pd9d042kdy0923nxs33jfs0l3esmeusfvwx86
+
+il y a aucun utxo dans cette addresse, je vais refaire tout a zero.
+
+1 - je decide d'ouvrir directement la tontine sans la fermer au prealable : 
+
+cardano-cli transaction build --tx-in ce60a7fc7b4a086d31808b251823a2e25f399ddfee70ba474c581d4c8762d10b#1 --tx-out $(cat /home/nkalla/tontineAddr2)+1500000  --tx-out-inline-datum-file /home/nkalla/Documents/testData/datumOpen.json --change-address $(cat /home/nkalla/monWallet/raoul.addr) --testnet-magic 1 --out-file openTontine2-unsigned
+
+2 - resultat :
+
+cardano-cli query utxo --testnet-magic 1 --address $(cat /home/nkalla/tontineAddr2)
+                           TxHash                                 TxIx        Amount
+--------------------------------------------------------------------------------------
+f78482f3921aadbae195581048574292d266d9487c6e9bbb6a4f682af468f345     0        1500000 lovelace + TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInBabbageEra (HashableScriptData "\216y\159\216y\159DOPEN\255\216y\159Ipresident\255\216y\159IpresidentEraoulE12236\255\255" (ScriptDataConstructor 0 [ScriptDataConstructor 0 [ScriptDataBytes "OPEN"],ScriptDataConstructor 0 [ScriptDataBytes "president"],ScriptDataConstructor 0 [ScriptDataBytes "president",ScriptDataBytes "raoul",ScriptDataBytes "12236"]]))
+
+
+3 - maintenant je vais essayer de tontiner 
+
+mon redeemer : tontineRedeemer2 = RedeemerData (OperationType "TONTINE") "raoul"
+
+mon datum  : datumOPen = TontineDatum (OperationType "OPEN") (Transactor "president") (Member "president" "raoul" "12236")
+
+ma tx : 
+
+cardano-cli transaction build --tx-in f78482f3921aadbae195581048574292d266d9487c6e9bbb6a4f682af468f345#1 --tx-in f78482f3921aadbae195581048574292d266d9487c6e9bbb6a4f682af468f345#0 --tx-in-inline-datum-present --tx-in-script-file /home/nkalla/Documents/tontine.plutus --tx-in-redeemer-file /home/nkalla/Documents/testData/tontineRedeemer2.json --tx-in-collateral f78482f3921aadbae195581048574292d266d9487c6e9bbb6a4f682af468f345#1  --tx-out $(cat /home/nkalla/tontineAddr2)+1500000 --tx-out-inline-datum-file /home/nkalla/Documents/testData/datumOpen.json --tx-out $(cat /home/nkalla/tontineAddr2)+100000000 --change-address $(cat /home/nkalla/monWallet/raoul.addr) --testnet-magic 1 --out-file tontine-unsigned
+
+resultat : Estimated transaction fee: Lovelace 411087
+
+-- je signe la tx : cardano-cli transaction sign --tx-body-file tontine-unsigned --signing-key-file  /home/nkalla/monWallet/privateKey.skey --testnet-magic 1 --out-file tontine-signed
+
+-- je soumets : cardano-cli transaction submit --tx-file tontine-signed --testnet-magic 1
+
+
+
+4 - apres tout ceci je fais le query de l'addresse de mon script : 
+
+cardano-cli query utxo --testnet-magic 1 --address $(cat /home/nkalla/tontineAddr2)
+                           TxHash                                 TxIx        Amount
+--------------------------------------------------------------------------------------
+6947460d1c6d49e233dea448aad39e43e5d31fe8b59c8a0c31bd2e25285f7b21     0        1500000 lovelace + TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInBabbageEra (HashableScriptData "\216y\159\216y\159DOPEN\255\216y\159Ipresident\255\216y\159IpresidentEraoulE12236\255\255" (ScriptDataConstructor 0 [ScriptDataConstructor 0 [ScriptDataBytes "OPEN"],ScriptDataConstructor 0 [ScriptDataBytes "president"],ScriptDataConstructor 0 [ScriptDataBytes "president",ScriptDataBytes "raoul",ScriptDataBytes "12236"]]))
+6947460d1c6d49e233dea448aad39e43e5d31fe8b59c8a0c31bd2e25285f7b21     1        100000000 lovelace + TxOutDatumNone
+
+commentaires : 
+- j'ai effectué une tontine, sans datum , mais j'aurais pu mettre un datum pour indiquer par exemple la personne qui a effectuer 
+la tx et pour quel membre.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
  
  
  
