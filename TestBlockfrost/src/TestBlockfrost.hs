@@ -29,6 +29,7 @@ funzione  = do
 
 
 -- cette fonction marche aussi tres bien, avec le node demarre
+-- c'est une fonction qui permet d'interroger les utxo d'une addresse sur le noeud
 test :: IO ()
 test = do
   _ <- projectFromEnv

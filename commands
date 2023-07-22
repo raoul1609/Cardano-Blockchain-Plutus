@@ -1,0 +1,466 @@
+. /home/raoul/.nix-profile/etc/profile.d/nix.sh
+
+
+
+
+
+## appunti con PPBL2023 ##
+
+-- d'abord il faut lancer le cardano run, apres il faut lancer le export ..., avant de commencer a faire les requettes sur la blockchain
+
+
+
+
+##-- demarrer la syncrhonisation avec la blockchain (le reseau pre-prod) --##
+
+cardano-node run --topology cardano-src/cardano-node/config_preprod/topology.json --database-path cardano-src/cardano-node/config_preprod/db --socket-path cardano-src/cardano-node/config_preprod/db/node.socket --host-addr 0.0.0.0 --port 3001 --config cardano-src/cardano-node/config_preprod/config.json
+
+
+apres avoir refait mon systeme : 
+
+cardano-node run --topology cardano-src/cardano-node/config_preprod/topology.json --database-path cardano-src/cardano-node/config_preprod/db --socket-path cardano-src/cardano-node/config_preprod/db/node.socket --host-addr 0.0.0.0 --port 3001 --config cardano-src/cardano-node/config_preprod/config.json
+
+rmq : si on veut demarrer un autre reseau (mainnet, preview) que le pre-prod il faut changer les fichiers de configurations
+
+pour demarrer le reseau preview on tape : les fichiers sont dans mon dossier /home/cardano
+
+cardano-node run --topology cardano/preview-network/preview-config/topology.json --database-path cardano/preview-network/db --socket-path cardano/preview-network/db/node.socket --host-addr 0.0.0.0 --port 3001 --config cardano/preview-network/preview-config/config.json 
+
+
+-- je dois me deplacer jusqu'au repertoire de db avant de taper la commande export, en fait node.socket doit etre dans le repertoire db
+
+export CARDANO_NODE_SOCKET_PATH=<YOUR PATH TO>
+ 
+
+
+
+
+
+## -- effectuer les requettes sur la blockchain --##
+
+cardano-cli query tip --testnet-magic 1  
+
+cardano-cli query utxo --testnet-magic 1 --address <ADDRESS>
+
+
+
+
+## -- generer une addresse de wallet --##
+
+pour generer une adresse de wallet : il faut generer tout d'abord une cle privee et une cle publique avec la commande :
+
+cardano-cli address key-gen \
+--verification-key-file payment.vkey \
+--signing-key-file payment.skey
+
+apres il faut generer un staking key, publique et privee avec la commande :
+
+cardano-cli stake-address key-gen \
+--verification-key-file stake.vkey \
+--signing-key-file stake.skey
+
+apres il faut faire un build, en passant la cle publique et le staking cle publique en precisant le reseau (preprod, mainnet,..) : 
+
+cardano-cli address build \
+--payment-verification-key-file payment.vkey \
+--stake-verification-key-file stake.vkey \
+--out-file payment.addr \
+--testnet-magic 1
+
+rmq : l'adresse obtenue ici est plus longue que celle obtenue sans le stakeKey
+
+NB : on peut build une adresse en passant seuelement le cle publique et les autres infos, sans le staking cle publique 
+
+cardano-cli address build \
+--payment-verification-key-file payment.vkey \
+--out-file payment.addr --testnet-magic 1
+
+
+
+
+
+## -- contruire une transaction : il faut build la transaction, il faut signer la transaction, et il faut submit sur le reseau 
+
+1--
+cardano-cli transaction build \
+--babbage-era \
+--testnet-magic 1 \
+--tx-in $UTXO_IN \
+--tx-out $SENDERADDRESS+$LOVELACE_TO_SEND \
+--change-address $SENDERADDRESS \
+--out-file simple-tx.raw
+
+2-- optionel
+
+cardano-cli transaction build \
+--babbage-era \
+--testnet-magic 1 \
+--tx-in $UTXO_IN \
+--tx-out $RECIPIENT_ADDRESS+$LOVELACE_TO_SEND \
+--change-address $SENDERADDRESS \
+--out-file simple-tx.raw
+
+NB : - quand on construit la transaction (cardano-cli transaction build) c'est nous qui precisons les utxo en sortie (tx-out), on liste
+ les utx en entree (tx-in) si il y en a plusieurs et les utxo de sortie si il y en a plusieurs !
+     - lorsque que nous voulons construire une transac, le utxo (qu'on veut mettre en entree a une nouvelle transac) est represente par le hash de la transaction dont il est issu et l'indice de cette transaction (somename=hashtransac#transacindex). somename est le nom de la variable qu'on passe a tx-in
+     SENDERADDRESS c'est l'adresse de depart, l'adresse de l'expediteur
+     RECIPIENT_ADDRESS = c'est l'addresse  du destinataire 
+     LOVELACe_TO_SEND = le nombre de ADA a envoyer
+ la creation des variables permet de rendre plus lisible et moins encombrant, sinon c'est pas une etape necessaire !!
+ 
+ 
+cardano-cli transaction sign \
+--signing-key-file $SENDERKEY \
+--testnet-magic 1 \
+--tx-body-file simple-tx.raw \
+--out-file simple-tx.signed
+
+NB : SENDERKEY c'est le chemin vers le fichier qui l'extension .sKey (la cle privee)
+
+cardano-cli transaction submit \
+--tx-file simple-tx.signed \
+--testnet-magic 1
+
+commentaire : la sortie de cardano-cli transaction build (simple-tx.raw) est l'entree de cardano-cli transaction sign ( elle est la variable passee a tx-body-file), ainsi de suite !!
+
+
+@@ homework1 : exemple de transaction avec 3 sorties : ici on cree une transaction avec trois sorties pour le meme wallet !! @@ 
+
+
+-- construction de la transac 
+
+cardano-cli transaction build \
+--babbage-era \
+--testnet-magic 1 \
+--tx-in $TXIN_LOVELACE \
+--tx-out $SENDER_ADDRESS+10000000 \
+--tx-out $SENDER_ADDRESS+15000000 \
+--tx-out $SENDER_ADDRESS+25000000 \
+--change-address $SENDER_ADDRESS \
+--out-file homework-split-utxo.raw
+
+-- une des variables 
+SENDER_KEY=/home/raoul/my-walletTest-ppbl/payment.skey
+
+-- signer la transac 
+cardano-cli transaction sign --signing-key-file $SENDER_KEY --testnet-magic 1 --tx-body-file homework-split-utxo.raw --out-file homework-split-utxo.signed 
+
+-- soumettre la transac sur le reseau pre-prod de la blockchain
+
+cardano-cli transaction submit \
+--tx-file homework-split-utxo.signed \
+--testnet-magic 1
+
+@@ homework2 : envoyer un native token a un autre wallet @@ 
+le utxo en entree a la transac doit contenir le native token, il faut creer une variable pour representer le id du native token
+
+cardano-cli transaction build \
+--babbage-era \
+--testnet-magic 1 \
+--tx-in $TXIN_LOVELACE \
+--tx-in $TXIN_WITH_PPBL2023_TOKEN \
+--tx-out $BROWSER_ADDRESS+"1500000 + 1 $PPBL2023_ASSET_ID" \
+--change-address $SENDER_ADDRESS \
+--out-file send-contrib-token.raw
+
+
+cardano-cli transaction sign \
+--signing-key-file $SENDER_KEY \
+--testnet-magic 1 \
+--tx-body-file send-contrib-token.raw \
+--out-file send-contrib-token.signed
+
+
+cardano-cli transaction submit \
+--tx-file send-contrib-token.signed \
+--testnet-magic 1
+
+
+
+## bloquer des fonds a une adresse de contract ##
+
+pour se faire on suit les memes etapes (build, sign, submit) d'une transaction normale entre deux wallets, en indiquant un datum a la sortie de la transaction !
+une transaction vers une adresse de contract necessite un datum pour pouvoir utiliser le utxo aui est dans bloque dans le contract
+une transaction normale necessite pas de datum.
+
+
+cardano-cli transaction build \
+--babbage-era \
+--testnet-magic 1 \
+--tx-in $UTXO_IN \
+--tx-out $ALWAYS_SUCCEEDS_ADDRESS_PLUTUSTX+$LOVELACE_TO_LOCK \
+--tx-out-inline-datum-value 1618 \
+--change-address $SENDER_ADDRESS \
+--out-file lock-always-succeeds.raw
+
+cardano-cli transaction sign \
+--signing-key-file $SENDER_KEY \
+--testnet-magic 1 \
+--tx-body-file lock-always-succeeds.raw \
+--out-file lock-always-succeeds.signed
+
+cardano-cli transaction submit \
+--tx-file lock-always-succeeds.signed \
+--testnet-magic 1
+
+
+
+
+## debloquer des fonds dans un contrat ##
+
+pour se faire il faut un variable appele colateral 
+il faut connaitre le utxo (il ne faut pas oublier que un utxo est identifie par hash tx#TxIx
+ qu'on veut debloquer, (dans une addresse il peut y en avoir plusieurs utxo)
+ 
+CONTRACT_UTXO=  -- c'est le utxo dont on veut debloquer
+PLUTUS_SCRIPT_FILE=  --chemin vers le repertoire ou se trouve le script
+COLLATERAL_UTXO=  -- le utxo du wallet 
+SENDER_ADDRESS=  -- addresse du wallet
+SENDER_KEY=   -- cle privee du wallet
+
+apres avoir definit ces variables il faut taper les commandes suivantes : 
+
+cardano-cli transaction build \
+--testnet-magic 1 \
+--tx-in $CONTRACT_UTXO \
+--tx-in-script-file $PLUTUS_SCRIPT_FILE \
+--tx-in-inline-datum-present \
+--tx-in-redeemer-value 1000 \
+--tx-in-collateral $COLLATERAL_UTXO \
+--change-address $SENDER_ADDRESS \
+--protocol-params-file protocol.json \
+--out-file unlock-always-succeeds.raw
+
+nb : pour avoir le protocol, il faut faire une requete en presisant le nom du fichier de sortie:
+
+cardano-cli query protocol-parameters --testnet-magic 1 --out-file protocol.json
+
+cardano-cli transaction sign \
+--signing-key-file $SENDER_KEY \
+--testnet-magic 1 \
+--tx-body-file unlock-always-succeeds.raw \
+--out-file unlock-always-succeeds.signed
+
+cardano-cli transaction submit \
+--tx-file unlock-always-succeeds.signed \
+--testnet-magic 1
+
+--##--@ je crois je vais sauter pour aller directement au module 301
+
+
+## appunti, con Lars : iteration4 lecture 2 ##
+
+il y a une librairie appele  Plutus.V2.Ledger.Api
+
+voici les differentes notions abordees :
+- comment ecrire un validateur plutus en low level 
+- comment ecrire un validateur plutus en high level
+
+## appunti, con Lars : iteration4 lecture3 ##
+
+- la notion de scriptContext : le scriptContext est un type qui permet de representer tout ce ce qui tourne autour de la transaction
+les infos en entree, le temps, le fee, le genre de tx (minting, spending, ...)
+
+- le temps (PosiXTime) : il nous permet de gerer le temps, les echeances et tout, il est definit dans Plutus.V1.Ledger.Interval
+labas il y a des fonctions pour traiter le temps ( hull, member, overlaps, ....)
+
+-- quelle est la notion a comprendre sur le parametized contracts ??, a quoi ca sert de faire le parametized contracts ??
+
+
+
+## lecture 4 : apputnti durante lettura del video1. 
+
+-- tout ceci en offchain
+
+-- query the blockchain
+the cardano validators have access only to :
+ - the context of the tx we want to submit 
+ - all its inputs and outputs (with their respective Values, Datums, and scripts) 
+ - the redeemers (our choice) 
+ 
+the are many ways to get this informations : 
+ - local node 
+ 
+-- building the tx (deploy the validator)       provide = fournir , retrieve = recuperer 
+
+- first we need the script address
+- indicating the inputs and the outputs
+- provide Datum 
+	- only datum's hash in the output
+	- datum's hash in output + the datums in tx body
+	- inline Datum (the datum in the output)
+- provide script
+	- only the script's hash
+	- the actual script (to be used as reference script)
+- coin selection, calculating fees, and balancing transaction 
+
+-- building the tx (use the validator) 
+- indicating the inputs, reference inputs and outputs
+- provide Datum
+	- utxo has datums's hash -> provide the datum on tx
+	- utxo has datum in tx body -> retrieve it from blockchain and provide it in tx 
+	- utxo has inlinde datum -> indicate it's an inline datum (no need to provide it)
+	
+-- sign the tx
+
+-- submitting the tx
+
+   - phase 1
+   	- checks whether the tx was built correctly and can be added to the ledger
+   	- if it fails, tx is rejected (no fees or collateral charged)
+   	
+   - phase 2
+	- we have everything we need. let's run the scripts !
+	- if it succeeds, the tx is added to the ledger, and the fees are used to pay the node
+	- if it fails, the tx is ignored, and the collateral is used to pay the node 
+
+-- determinism 
+	- predictable effects -> check phrases off-chain
+	
+
+
+## lecture5 : appunti dopo lettura video1
+		idea generale : native token
+		
+- la fonction assetClass permet de creer un element de type AssetClass
+- la fonction assetClassValue de creer un element de type Value
+
+
+## appunti su blockfrost ##
+
+blockfrost permet de faire des requettes sur la blockchain cardano
+IPFS : interplanatary fileSystem
+
+pour commencer il faut creer un compte sur blockfrost.io
+
+il mio projectId : preprodcm3OA5nBkHcJy8NSKoHjHGhxgTDkNPzw
+nome del projetto : NeudjieuTestPreprod
+
+pour faire un requete en utilisant l'api de blockfrost :
+  - je tape export PROJECT_ID=preprodcm3OA5nBkHcJy8NSKoHjHGhxgTDkNPzw 
+  - ma requete : curl -H "project_id: $PROJECT_ID" "https://cardano-preprod.blockfrost.io/api/v0/addresses/addr_test1qrfvl09vznmcqth7mdrvhlvj8rwyx4x22k7kgs7st7e9cmgeswxsf9fae0wj4e3st46hung22dfgaqytuw78z5el86cqrxs0d8"
+  
+  nb :   - l'addresse utilise est celle de mon Nami !
+  	 - la requette change en fonction du reseau (mainnet, preprod , preview)
+  
+ voila ce que j'obtient : un JSON {"address":"addr_test1qrfvl09vznmcqth7mdrvhlvj8rwyx4x22k7kgs7st7e9cmgeswxsf9fae0wj4e3st46hung22dfgaqytuw78z5el86cqrxs0d8","amount":[{"unit":"lovelace","quantity":"9901457647"}],"stake_address":"stake_test1uqvc8rgyj57uhhf2ucc96at7f599x55wsz9780r32vlnavqy62722","type":"shelley","script":false}
+ 
+ 
+ 
+ # off-chain code VS on-chain code 
+ 
+ 
+ on-chain code : 
+ 
+ 
+ 
+ --------------------------------------------------------======-----------------------------------------------------------
+ 
+ 1 - construire l'addresse d'un script ( le gifts du Week2) 
+ 
+ cardano-cli address build --payment-script-file $cat ./assets/gift.plutus --testnet-magic 1
+ 
+ resultat : addr_test1wqag3rt979nep9g2wtdwu8mr4gz6m4kjdpp5zp705km8wys6t2kla
+ 
+ 
+ 2 - pour construire le redeemer j'utilise la fonction writeDataToFile du module Serialise.hs 
+ 
+ writeDataToFile "/workspace/code/Week02/homework/raoulRedeemer.json" (BuiltinData (I 42))
+ 
+ rmq : cette commande amrche aussi comme ceci : writeDataToFile "/workspace/code/Week02/homework/raoulRedeemer.json" 42
+ 
+ 
+ 3 - j'essaye de consommer un utxo, du script fortyTwo, le utxo n'est consommé que lorsque le redeemer vaut 42
+ 
+ ---------------------- avec le cli -----------------------
+ 
+ cardano-cli transaction build --testnet-magic 1 --tx-in 74b6434f4ee1ff0487e98876c4aed88c1ad007561ffaecb428c8e2736d635cc0#0 --tx-in-script-file /home/nkalla/plutus-pioneer-program/code/Week02/assets/fortytwo.plutus --tx-in-inline-datum-present --tx-in-redeemer-file /home/nkalla/plutus-pioneer-program/code/Week02/homework/raoulRedeemer.json  --tx-in-collateral 1e93b03d66d70867b5965a6a1b9be66ddc9cca60b81ff8a6f2069ad57aaa66e5#1 --change-address addr_test1wpqlfqjt8czqmd6dqxrxvdr8tp8gt4a8xg40d6jzs9wx7fg93pm8a --out-file raoul-fortyTwo.raw
+ 
+ interpretation :
+ - c'est une tx qui retire le utxo du script et le remet sans le toucher : c'est juste pour tester sa logique
+ - en entree a cette tx, je mets le utxo a consommer qui provient du script. car le script ne se lance que si un de ses utxos 
+ veut etre consommer par une tx.
+ - le collateral  est un utxo present dans mon wallet, le wallet dans lequel je construit la tx, qui va servir pour payer en cas d'echec a la deuxieme phase, sinon les fees seront coupes dans le utxo du script.
+ 
+ resultat : Estimated transaction fee: Lovelace 173124
+ 
+ 
+ je signe la transaction avec ma cle prive : 
+ 
+ cardano-cli transaction sign --signing-key-file /home/nkalla/monWallet/privateKey.skey --testnet-magic 1 --tx-body-file raoul-fortyTwo.raw --out-file raoul-fortyTwo.signed
+ 
+ 
+ je oumets la tx : 
+ 
+ cardano-cli transaction submit --tx-file raoul-fortyTwo.signed --testnet-magic 1
+ 
+ resultat :  Transaction successfully submitted.
+ 
+ 
+ ----------------- essayons avec blockfrost ------------------------------
+ 
+mes remarques : 
+
+- blockfrost est un API, c'est un moyen pour interagir avec la blockchain cardano. on pourrait aussi utiliser cardano-cli,
+ou bien db-sync pour le meme travail
+
+- blockfrost n'a pas de fonction pour construire une transaction.
+
+- comment faire un off-chain code avec haskell : j'ai deja experimente l'appel du cli dans le code, mais est ce la bonne methode ?
+
+
+-------------- j'essaye de faire les exercices du week4 de plutus pioneer programm -----------
+
+construit un datum de type : MisteryDatum 
+
+- activer le -XOverloadedString 
+- le posixTime :  let val =  POSIXTime 2023-08-16
+- misteryDatum = MisteryDatum (PubKeyHash "91dbe3d70568b1ada2b0f059a8394dffb8fa632214c42c66f87fde95") (PubKeyHash "2fd3140fe8c8c05556b041cbab2132b7b0070ef603b9098368609d8a") val 
+
+
+
+------------------------------------== test du code offchain du script de la tontine ==-----------------------------------
+
+-- j'ai monte un projet cabal, dans lequel j'ai copié le projet Utilities  de plutus pioner program
+-- je vais utiliser le moduler System.Process pour appeler le cli dans le code 
+-- il ne faut pas oublier de faire :set -XOverloadedStrings avant de taper les commandes pour contruire les donnees 
+-- pour indiquer le chemin a saveDataToFile pour sauvegarder le redeemer et le datum, il faut passer le chemin absolu 
+	exemple : /home/nkalla/Documents/testData/datum.json
+	
+-- la premiere tx est pour fermer la tontine, cad changer le datum dans le wallet du script qui n'est qu'une tx normal de paiement.
+	entre deux scripts 
+-- pour ouvrir la tontine il faut que le status soit ferme
+
+---------------------------------------- on construit la tx --------------------------------------
+
+cardano-cli transaction build --tx-in 87e7655725d701b708909bf5db8e652e53acc18a66e7cc5a9cb8f8ffa3b7d3e6#1 --tx-out $(cat /home/nkalla/tontineAddr)+1500000  --tx-out-inline-datum-file /home/nkalla/Documents/testData/datum2.json --change-address $(cat /home/nkalla/monWallet/raoul.addr) --testnet-magic 1 --out-file changeStatus-unsigned
+
+commentaires : 
+	-- en entree de la tx  il y a le utxo du wallet dans lequel on va retirer les 1500000 lovelaces
+	-- on construit un datum avec la fonction savaDataToFile 
+	
+resultat : 
+Estimated transaction fee: Lovelace 169637
+
+--------------------------------------------- on signe la tx -------------------------------
+
+cardano-cli transaction sign --tx-body-file changeStatus-unsigned --signing-key-file  /home/nkalla/monWallet/privateKey.skey --testnet-magic 1 --out-file changeStatus-signed
+
+------------------------------------- on submit la tx --------------------------
+
+cardano-cli transaction submit --tx-file changeStatus-signed --testnet-magic 1
+Transaction successfully submitted
+
+
+---------------------------------------------- quand je fais le query utxo -------------------------------------
+
+cardano-cli query utxo --testnet-magic 1 --address $(cat /home/nkalla/tontineAddr)
+                           TxHash                                 TxIx        Amount
+--------------------------------------------------------------------------------------
+87e7655725d701b708909bf5db8e652e53acc18a66e7cc5a9cb8f8ffa3b7d3e6     0        10000000 lovelace + TxOutDatumNone
+e30fbb11283895de8422e7b938289077b84d839c7356b49bb04916faee5a1437     0        1500000 lovelace + TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInBabbageEra (HashableScriptData "\216y\159\216y\159ECLOSE\255\216y\159Ipresident\255\216y\159IpresidentEraoulE12236\255\255" (ScriptDataConstructor 0 [ScriptDataConstructor 0 [ScriptDataBytes "CLOSE"],ScriptDataConstructor 0 [ScriptDataBytes "president"],ScriptDataConstructor 0 [ScriptDataBytes "president",ScriptDataBytes "raoul",ScriptDataBytes "12236"]]))
+ 
+ 
+ 
+ 
+

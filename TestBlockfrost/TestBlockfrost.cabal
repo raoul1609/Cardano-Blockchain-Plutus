@@ -28,6 +28,7 @@ library
       Example
       Lib
       TestBlockfrost
+      TestOffChain
   other-modules:
       Paths_TestBlockfrost
   hs-source-dirs:

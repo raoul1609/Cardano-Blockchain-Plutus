@@ -36,14 +36,14 @@ packages:
 # forks / in-progress versions pinned to a git hash. For example:
 #
 extra-deps:
-  - blockfrost-client-0.7.1.1
-  - blockfrost-api-0.8.0.0
-  - blockfrost-client-core-0.6.0.0
+- blockfrost-client-0.7.1.1
+- blockfrost-api-0.8.0.0
+- blockfrost-client-core-0.6.0.0
 # - acme-missiles-0.3
-# - git: https://github.com/commercialhaskell/stack.git
-#   commit: e7b331f14bcffb8367cd58fbfc8b40ec7642100a
-#
-# extra-deps: []
+# - git: https://github.com/input-output-hk/plutus-pioneer-program.git
+#   commit: f1d0292211c6b8be145337bceb091f7514758ac4
+
+#extra-deps: [] 
 
 # Override default flag values for local packages and extra-deps
 # flags: {}
