@@ -626,9 +626,99 @@ cardano-cli query utxo --testnet-magic 1 --address $(cat /home/nkalla/tontineAdd
 6947460d1c6d49e233dea448aad39e43e5d31fe8b59c8a0c31bd2e25285f7b21     0        1500000 lovelace + TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInBabbageEra (HashableScriptData "\216y\159\216y\159DOPEN\255\216y\159Ipresident\255\216y\159IpresidentEraoulE12236\255\255" (ScriptDataConstructor 0 [ScriptDataConstructor 0 [ScriptDataBytes "OPEN"],ScriptDataConstructor 0 [ScriptDataBytes "president"],ScriptDataConstructor 0 [ScriptDataBytes "president",ScriptDataBytes "raoul",ScriptDataBytes "12236"]]))
 6947460d1c6d49e233dea448aad39e43e5d31fe8b59c8a0c31bd2e25285f7b21     1        100000000 lovelace + TxOutDatumNone
 
-commentaires : 
+--commentaires : 
 - j'ai effectué une tontine, sans datum , mais j'aurais pu mettre un datum pour indiquer par exemple la personne qui a effectuer 
 la tx et pour quel membre.
+
+
+5 - je vais essayer de fermer la tontine 
+
+cardano-cli transaction build --tx-in d1c6eaf1df44fd075f2dcfaf47e62a2f7bc146aa658ef0e11da333c98b15d60b#1 --tx-in d1c6eaf1df44fd075f2dcfaf47e62a2f7bc146aa658ef0e11da333c98b15d60b#0 --tx-in-inline-datum-present --tx-in-script-file /home/nkalla/Documents/tontine.plutus --tx-in-redeemer-file /home/nkalla/Documents/testData/closeRedeemer3.json --tx-in-collateral d1c6eaf1df44fd075f2dcfaf47e62a2f7bc146aa658ef0e11da333c98b15d60b#1  --tx-out $(cat /home/nkalla/tontineAddr2)+1500000 --tx-out-inline-datum-file /home/nkalla/Documents/testData/datumRaoulClose.json  --change-address $(cat /home/nkalla/monWallet/raoul.addr) --testnet-magic 1 --out-file closeTontine-unsigned
+
+
+je n'arrive pas a fermer la tontine.
+
+RMQ : quelqu'un peut faire une tx vers le script avec un datum OPEN, et debloquer les fonds meme si il y a deja un utxo  avec un datum CLOSE. il met juste le utxo avec le datum OPEN en entree a la tx et ca passe ?????
+
+solution : il faut ajouter l'option required-signer-hash + (le hash de l'addresse de celui qui va signer la tx)
+il faut comprendre que le tx se construit en local, et donc doit avoir tous les elements necessaires pour la validation avant de pousser la tx sur le reseau voici la bonne commande : 
+
+cardano-cli transaction build --tx-in d1c6eaf1df44fd075f2dcfaf47e62a2f7bc146aa658ef0e11da333c98b15d60b#1 --tx-in d1c6eaf1df44fd075f2dcfaf47e62a2f7bc146aa658ef0e11da333c98b15d60b#0 --tx-in-inline-datum-present --tx-in-script-file /home/nkalla/Documents/tontine.plutus --tx-in-redeemer-file /home/nkalla/Documents/testData/closeRedeemer3.json --required-signer-hash 91dbe3d70568b1ada2b0f059a8394dffb8fa632214c42c66f87fde95 --tx-in-collateral d1c6eaf1df44fd075f2dcfaf47e62a2f7bc146aa658ef0e11da333c98b15d60b#1  --tx-out $(cat /home/nkalla/tontineAddr2)+1500000 --tx-out-inline-datum-file /home/nkalla/Documents/testData/datumRaoulClose.json  --change-address $(cat /home/nkalla/monWallet/raoul.addr) --testnet-magic 1 --out-file closeTontine-unsigned
+
+
+
+resultat : ca passe tres bien. faisons un query de l'addresse du script pour voir : 
+
+cardano-cli query utxo --testnet-magic 1 --address $(cat /home/nkalla/tontineAddr2)
+                           TxHash                                 TxIx        Amount
+--------------------------------------------------------------------------------------
+6947460d1c6d49e233dea448aad39e43e5d31fe8b59c8a0c31bd2e25285f7b21     0        1500000 lovelace + TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInBabbageEra (HashableScriptData "\216y\159\216y\159DOPEN\255\216y\159Ipresident\255\216y\159IpresidentEraoulE12236\255\255" (ScriptDataConstructor 0 [ScriptDataConstructor 0 [ScriptDataBytes "OPEN"],ScriptDataConstructor 0 [ScriptDataBytes "president"],ScriptDataConstructor 0 [ScriptDataBytes "president",ScriptDataBytes "raoul",ScriptDataBytes "12236"]]))
+6947460d1c6d49e233dea448aad39e43e5d31fe8b59c8a0c31bd2e25285f7b21     1        100000000 lovelace + TxOutDatumNone
+fe6d122db7cdc2489e2f68ce1187466003e023d4ab5a177a41df46f9f4c227b4     0        1500000 lovelace + TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInBabbageEra (HashableScriptData "\216y\159\216y\159ECLOSE\255\216y\159Eraoul\255\216y\159IpresidentEraoulE12236\255\255" (ScriptDataConstructor 0 [ScriptDataConstructor 0 [ScriptDataBytes "CLOSE"],ScriptDataConstructor 0 [ScriptDataBytes "raoul"],ScriptDataConstructor 0 [ScriptDataBytes "president",ScriptDataBytes "raoul",ScriptDataBytes "12236"]]))
+
+
+6 - essayons de payer : j'effectue le paiement en utilisant le utxo qui vaut 100000000 du script pour mon address : raoul.addr
+
+
+cardano-cli transaction build --tx-in fe6d122db7cdc2489e2f68ce1187466003e023d4ab5a177a41df46f9f4c227b4#1 --tx-in 6947460d1c6d49e233dea448aad39e43e5d31fe8b59c8a0c31bd2e25285f7b21#1 --tx-in-script-file /home/nkalla/Documents/tontine.plutus --tx-in-datum-file /home/nkalla/Documents/testData/datumPay.json --tx-in-redeemer-file /home/nkalla/Documents/testData/payRedeemer.json --tx-in-collateral fe6d122db7cdc2489e2f68ce1187466003e023d4ab5a177a41df46f9f4c227b4#1 --tx-out $(cat /home/nkalla/monWallet/raoul.addr)+100000000  --testnet-magic 1 --out-file paiement-unsigned --change-address $(cat /home/nkalla/monWallet/raoul.addr)
+
+
+--resultat : 
+
+Command failed: transaction build  Error: The following scripts have execution failures:
+the script for transaction input 0 (in the order of the TxIds) failed with: 
+The Plutus script witness for the txin does not have a script datum (according to the UTxO). The txin in question is 6947460d1c6d49e233dea448aad39e43e5d31fe8b59c8a0c31bd2e25285f7b21#1
+
+
+--commentaires : selon la logique de la tontine, en tontinant il faut mettre un datum en sortie de la dite tx.
+--rmq : le validateur est une fonction dont ses parametres sont les elements utilises quand on fait un cardano-cli, il voit les --tx-in , les datum, les redeemers et les --tx-out.
+
+
+7 - je vais essayer de tontiner normalement 
+
+
+cardano-cli transaction build --tx-in 7a6ef405e0c0b44160bf70854174c1397172ced50601a6284a50f0baaeeeefab#1 --tx-in 7a6ef405e0c0b44160bf70854174c1397172ced50601a6284a50f0baaeeeefab#0  --tx-in-inline-datum-present --tx-in-script-file /home/nkalla/Documents/tontine.plutus --tx-in-redeemer-file /home/nkalla/Documents/testData/tontineRedeemer2.json  --tx-in-collateral 7a6ef405e0c0b44160bf70854174c1397172ced50601a6284a50f0baaeeeefab#1  --tx-out $(cat /home/nkalla/tontineAddr2)+1500000 --tx-out-inline-datum-file /home/nkalla/Documents/testData/datumOpen.json --tx-out $(cat /home/nkalla/tontineAddr2)+100000000 --tx-out-inline-datum-file /home/nkalla/Documents/testData/datumClose.json  --change-address $(cat /home/nkalla/monWallet/raoul.addr) --testnet-magic 1 --out-file newTontine-unsigned 
+
+
+commentaires : quand je tontine je consomme le utxo du script qui a le datum OPEN, donc je devrais avoir a la sortie de ma tx : 
+un utxo+datum(OPEN) pour maintenir la tontine ouverte et ainsi permettre a une autre personne de cotiser et un utxo+datum(CLOSE) car selon la logique du script, un utxo n'est consommé au moment du paiement que si il a le datum CLOSE.
+
+
+8 - je vais essayer de payer a mon addresse le uxto de 100000000 que j'ai tontiné.
+
+
+cardano-cli transaction build --tx-in f311cd762b418d6c38690f25802af421357e4c1390fe56c5d082250a1c0e2a84#2 --tx-in f311cd762b418d6c38690f25802af421357e4c1390fe56c5d082250a1c0e2a84#1 --tx-in-inline-datum-present --tx-in-script-file /home/nkalla/Documents/tontine.plutus --tx-in-redeemer-file /home/nkalla/Documents/testData/payRedeemer.json --required-signer-hash 91dbe3d70568b1ada2b0f059a8394dffb8fa632214c42c66f87fde95 --tx-in-collateral f311cd762b418d6c38690f25802af421357e4c1390fe56c5d082250a1c0e2a84#2 --tx-out $(cat /home/nkalla/monWallet/raoul.addr)+100000000 --change-address $(cat /home/nkalla/tontineAddr2) --testnet-magic 1 --out-file pay-unsigned
+
+resultat : Estimated transaction fee: Lovelace 402221
+
+-- commentaires : aussi pour le payement , il faut preciser le --required-signer-hash. ca aide a verifier si la personne qui fait la tx est parmi les gens autorisés a le faire. 
+
+
+-- apres avoir signé et soumis la tx, faisons le query de mon addresse pour voir le resultat 
+je met un utxo de mon address en entree pour supporter le collateral, et je dois preciser que le reste lui revient. mais j'ai fait une boulette et j'ai dit que je reste va a mon script et voici le resultat : 
+
+cardano-cli query utxo --testnet-magic 1 --address $(cat /home/nkalla/tontineAddr2)
+                           TxHash                                 TxIx        Amount
+--------------------------------------------------------------------------------------
+049e0c9629ce921d8196a24ab5ee833ba9d1ee612c981b6b25dbea61c65efbcc     1        9630865645 lovelace + TxOutDatumNone
+2ec1bf6b60eb32f1522ede3fa106df5c7bd58428de86d6995af9bf42fc0c1608     1        100000000 lovelace + TxOutDatumNone
+6947460d1c6d49e233dea448aad39e43e5d31fe8b59c8a0c31bd2e25285f7b21     1        100000000 lovelace + TxOutDatumNone
+f311cd762b418d6c38690f25802af421357e4c1390fe56c5d082250a1c0e2a84     0        1500000 lovelace + TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInBabbageEra (HashableScriptData "\216y\159\216y\159DOPEN\255\216y\159Ipresident\255\216y\159IpresidentEraoulE12236\255\255" (ScriptDataConstructor 0 [ScriptDataConstructor 0 [ScriptDataBytes "OPEN"],ScriptDataConstructor 0 [ScriptDataBytes "president"],ScriptDataConstructor 0 [ScriptDataBytes "president",ScriptDataBytes "raoul",ScriptDataBytes "12236"]]))
+fe6d122db7cdc2489e2f68ce1187466003e023d4ab5a177a41df46f9f4c227b4     0        1500000 lovelace + TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInBabbageEra (HashableScriptData "\216y\159\216y\159ECLOSE\255\216y\159Eraoul\255\216y\159IpresidentEraoulE12236\255\255" (ScriptDataConstructor 0 [ScriptDataConstructor 0 [ScriptDataBytes "CLOSE"],ScriptDataConstructor 0 [ScriptDataBytes "raoul"],ScriptDataConstructor 0 [ScriptDataBytes "president",ScriptDataBytes "raoul",ScriptDataBytes "12236"]]))
+
+
+commentaires : voila un utxo de 9000tAda que j'ai perdu, il est dans mon script sans datum, et selon la logique de la tontine, on utilise un utxo dans le paiement que si il a un datum CLOSE
+
+
+cardano-cli query utxo --testnet-magic 1 --address $(cat /home/nkalla/monWallet/raoul.addr)
+                           TxHash                                 TxIx        Amount
+--------------------------------------------------------------------------------------
+049e0c9629ce921d8196a24ab5ee833ba9d1ee612c981b6b25dbea61c65efbcc     0        100000000 lovelace + TxOutDatumNone
+
+commentaires : voila mon addresse qui a seulement le utxo de 100000000 que j'ai payé depuis le script.
+
+
+
 
 
 
