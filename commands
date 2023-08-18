@@ -354,7 +354,7 @@ pour faire un requete en utilisant l'api de blockfrost :
  
  
  
- --------------------------------------------------------======-----------------------------------------------------------
+ ------------------ ====== cas pratiques sur le cardano-cli : ===== ----------------------------------------------------------
  
  1 - construire l'addresse d'un script ( le gifts du Week2) 
  
@@ -390,7 +390,7 @@ pour faire un requete en utilisant l'api de blockfrost :
  cardano-cli transaction sign --signing-key-file /home/nkalla/monWallet/privateKey.skey --testnet-magic 1 --tx-body-file raoul-fortyTwo.raw --out-file raoul-fortyTwo.signed
  
  
- je oumets la tx : 
+ je soumets la tx : 
  
  cardano-cli transaction submit --tx-file raoul-fortyTwo.signed --testnet-magic 1
  
@@ -409,7 +409,7 @@ ou bien db-sync pour le meme travail
 - comment faire un off-chain code avec haskell : j'ai deja experimente l'appel du cli dans le code, mais est ce la bonne methode ?
 
 
--------------- j'essaye de faire les exercices du week4 de plutus pioneer programm -----------
+--------------===== j'essaye de faire les exercices du week4 de plutus pioneer programm ===== -----------
 
 construit un datum de type : MisteryDatum 
 
@@ -432,8 +432,8 @@ tous les Week et laisser seulement utilities le (.) dans Packages.
 -- pour indiquer le chemin a saveDataToFile pour sauvegarder le redeemer et le datum, il faut passer le chemin absolu 
 	exemple : /home/nkalla/Documents/testData/datum.json.
 	
--- la premiere tx est pour fermer la tontine, cad mettre un utxo avant un datum contenant CLOSE dans le wallet du script. en realite c'est un tx normale entre deux scripts. 
--- pour ouvrir la tontine il faut que le status soit ferme ( c'est la logique de notre script).
+-- la premiere tx est pour fermer la tontine, cad mettre un utxo avant un datum contenant CLOSE dans le wallet du script. en realite c'est un tx normale entre deux adresses. 
+-- pour ouvrir la tontine il faut que le status soit ferme : donc il fautr un utxo avec un datum CLOSE dedans ( c'est la logique de notre script).
 
 ---------------------------------------- on construit la tx pour fermer la reunion --------------------------------------
 
@@ -716,6 +716,32 @@ cardano-cli query utxo --testnet-magic 1 --address $(cat /home/nkalla/monWallet/
 049e0c9629ce921d8196a24ab5ee833ba9d1ee612c981b6b25dbea61c65efbcc     0        100000000 lovelace + TxOutDatumNone
 
 commentaires : voila mon addresse qui a seulement le utxo de 100000000 que j'ai payé depuis le script.
+
+
+
+
+------------== appunti Week05 : minting policy at NFT ===-----------------------------
+
+obietivi da raggiungere :     -> Obietivo Raggiunto
+
+ - c'est quoi un minting policy
+ - c'est quoi un NFT
+ - difference entre minting policy et NFT
+ - difference netre une tx de minting et une tx normale sur cardano
+ 
+le minting policy c'est unfonction (une sorte de validateur) qui te permet de creer un token, la tx de minting ne prend pas de datum a la difference d'une tx normal entre deux wallets.
+
+apres avoir fait le homework1 et le homework2 voici mes donnees utilisees 
+
+pour obtenir le posixTime j'ai utilise la fonction getPosixTime de la libraire Data.Time.Clock.POSIX
+
+j'ai appelé ma fonction de serialisation  du homework1 parametré avec le pubKeyhash et le posixTime comme suit : 
+
+saveHomework1Policy "91dbe3d70568b1ada2b0f059a8394dffb8fa632214c42c66f87fde95" (POSIXTime 1692373818851207511)
+
+j'ai appelé ma fonction de serialisation du homework2 parametré avec le txOutRef et le tokenName comme suit : 
+
+saveHomework2Policy ( TxOutRef "049e0c9629ce921d8196a24ab5ee833ba9d1ee612c981b6b25dbea61c65efbcc" 0) "raoul"
 
 
 
