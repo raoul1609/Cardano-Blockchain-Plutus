@@ -1,0 +1,87 @@
+cabal-version:      2.4
+name:               testing
+version:            0.1.0.0
+
+-- A short (one-line) description of the package.
+-- synopsis:
+
+-- A longer description of the package.
+-- description:
+
+-- A URL where users can report bugs.
+-- bug-reports:
+
+-- The license under which the package is released.
+-- license:
+
+-- The package author(s).
+-- author:
+maintainer:         elieraoulnet@gmail.com
+
+-- A copyright notice.
+-- copyright:
+-- category:
+extra-source-files: CHANGELOG.md
+
+
+-- common permet de specifier trucs communs, apres il faut l'importer a differents endroit
+-- pour effectuer les tests quickcheck dans un projet construit avec cabal il faut : 
+        -- ajouter QuickCheck dans les dependences 
+        -- ajouter cabal-test-quickcheck specifier la version comme suit -> obligatoire 
+        -- ajouter Cabal specifiant la version comme suit -> obligatoire 
+
+common  common-all
+    default-language: Haskell2010
+    build-depends:    base ^>=4.14.3.0,
+                      QuickCheck >= 2.0,
+                      hspec,
+                      cabal-test-quickcheck >= 0.1,
+                      Cabal >= 3.0.1.0
+    ghc-options:      -Wall  
+
+
+-- library permet de specifier une autre librairie supplementaire au projet, car a la creation il existe que app
+-- la commande cabal repl lance la librarie additionnelle, ici src 
+-- la commande cabal run lance l'executable qui est dans le projet
+
+library 
+    import: common-all
+    exposed-modules: TestFonctions
+    hs-source-dirs:   src
+    
+
+executable testing
+    import: common-all
+    main-is:          Main.hs
+
+    -- Modules included in this executable, other than Main.
+    -- other-modules: TestFonctions , TestingCode
+
+    -- LANGUAGE extensions used by modules in this package.
+    -- other-extensions: src, tests
+    build-depends:    aeson
+                     , bytestring
+                    --  , containers
+                    -- , cardano-api
+                    -- , data-default
+                    -- , plutus-ledger-api
+                    -- , plutus-tx-plugin    
+                    -- , plutus-tx
+                    -- , text
+                    -- , serialise
+                    -- , utilities
+
+    hs-source-dirs:   app, src
+
+-- Test-Suite permet de gerer les outils de test du projet, il doit etre ecrit comme suit 
+
+Test-Suite myTests
+    import:         common-all 
+    -- type est le type de test a effectuer, surement que c'est un standard
+    type:           detailed-0.9
+    hs-source-dirs: src, tests 
+    -- le module de testing 
+    test-module:    TestingCode
+    -- les modules utiles pour les test, ici c'est le module ou se trouve la fonction a tester 
+    other-modules:  TestFonctions
+       
