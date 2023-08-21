@@ -1,0 +1,9 @@
+Test suite myTests: RUNNING...
+
+test de kìla fonction addition 
+  (addition a b) >= a [✔]
+
+Finished in 0.0001 seconds
+1 example, 0 failures
+Test suite myTests: PASS
+Test suite logged to: /home/nkalla/Documents/RaoulDocs/Cardano-Blockchain-Plutus/testing/dist-newstyle/build/x86_64-linux/ghc-8.10.7/testing-0.1.0.0/t/myTests/test/testing-0.1.0.0-myTests.log

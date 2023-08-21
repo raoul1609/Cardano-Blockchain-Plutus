@@ -33,10 +33,10 @@ extra-source-files: CHANGELOG.md
 common  common-all
     default-language: Haskell2010
     build-depends:    base ^>=4.14.3.0,
-                      QuickCheck >= 2.0,
+                      QuickCheck,
                       hspec,
-                      cabal-test-quickcheck >= 0.1,
-                      Cabal >= 3.0.1.0
+                      --cabal-test-quickcheck >= 0.1,
+                      --Cabal >= 3.0.1.0
     ghc-options:      -Wall  
 
 
@@ -75,11 +75,14 @@ executable testing
 
 -- Test-Suite permet de gerer les outils de test du projet, il doit etre ecrit comme suit 
 
-Test-Suite myTests
+test-suite myTests
     import:         common-all 
     -- type est le type de test a effectuer, surement que c'est un standard
-    type:           detailed-0.9
+    --type:           detailed-0.9
+    type:           exitcode-stdio-1.0
+    main-is:        TestingCode.hs
     hs-source-dirs: src, tests 
+    --hs-source-dirs: testing
     -- le module de testing 
     test-module:    TestingCode
     -- les modules utiles pour les test, ici c'est le module ou se trouve la fonction a tester 
