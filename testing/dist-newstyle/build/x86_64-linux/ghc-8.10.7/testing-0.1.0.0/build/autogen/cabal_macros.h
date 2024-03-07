@@ -20,6 +20,16 @@
   (major1) == 2 && (major2) <  14 || \
   (major1) == 2 && (major2) == 14 && (minor) <= 3)
 #endif /* MIN_VERSION_QuickCheck */
+/* package amqp-0.22.2 */
+#ifndef VERSION_amqp
+#define VERSION_amqp "0.22.2"
+#endif /* VERSION_amqp */
+#ifndef MIN_VERSION_amqp
+#define MIN_VERSION_amqp(major1,major2,minor) (\
+  (major1) <  0 || \
+  (major1) == 0 && (major2) <  22 || \
+  (major1) == 0 && (major2) == 22 && (minor) <= 2)
+#endif /* MIN_VERSION_amqp */
 /* package base-4.14.3.0 */
 #ifndef VERSION_base
 #define VERSION_base "4.14.3.0"
@@ -30,15 +40,25 @@
   (major1) == 4 && (major2) <  14 || \
   (major1) == 4 && (major2) == 14 && (minor) <= 3)
 #endif /* MIN_VERSION_base */
-/* package hspec-2.11.4 */
+/* package bytestring-0.10.12.0 */
+#ifndef VERSION_bytestring
+#define VERSION_bytestring "0.10.12.0"
+#endif /* VERSION_bytestring */
+#ifndef MIN_VERSION_bytestring
+#define MIN_VERSION_bytestring(major1,major2,minor) (\
+  (major1) <  0 || \
+  (major1) == 0 && (major2) <  10 || \
+  (major1) == 0 && (major2) == 10 && (minor) <= 12)
+#endif /* MIN_VERSION_bytestring */
+/* package hspec-2.11.5 */
 #ifndef VERSION_hspec
-#define VERSION_hspec "2.11.4"
+#define VERSION_hspec "2.11.5"
 #endif /* VERSION_hspec */
 #ifndef MIN_VERSION_hspec
 #define MIN_VERSION_hspec(major1,major2,minor) (\
   (major1) <  2 || \
   (major1) == 2 && (major2) <  11 || \
-  (major1) == 2 && (major2) == 11 && (minor) <= 4)
+  (major1) == 2 && (major2) == 11 && (minor) <= 5)
 #endif /* MIN_VERSION_hspec */
 
 /* tool gcc-12 */

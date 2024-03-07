@@ -1,6 +1,6 @@
-/*ici c'est le offchain code du homework1 du week05 qui a ete deployé sans les parametres
- - je dois passer le pubkeyhash , le deadline pour parametrer le script  
- - rmq : quand je passe seulement le pubkeyhash la tx passe bien. le token est cree dans mon nami */
+/* ici c'est le offchain code du homework1 du week05 qui a ete deployé sans les parametres
+ - je dois passer seulement le pubkeyhash le script se base sur le txInfoValidRange 
+        du ScriptContext pour gerer le notion de deadline */ 
 
 import {
     Lucid,

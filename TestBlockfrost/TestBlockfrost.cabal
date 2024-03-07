@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.35.1.
+-- This file has been generated from package.yaml by hpack version 0.35.2.
 --
 -- see: https://github.com/sol/hpack
 
@@ -26,9 +26,9 @@ source-repository head
 library
   exposed-modules:
       Example
+      Functions
       Lib
       TestBlockfrost
-      TestOffChain
   other-modules:
       Paths_TestBlockfrost
   hs-source-dirs:
@@ -39,6 +39,7 @@ library
     , base >=4.7 && <5
     , blockfrost-api
     , blockfrost-client
+    , hspec
     , http-client
     , http-conduit
     , network
@@ -59,6 +60,7 @@ executable TestBlockfrost-exe
     , base >=4.7 && <5
     , blockfrost-api
     , blockfrost-client
+    , hspec
     , http-client
     , http-conduit
     , network
@@ -70,6 +72,7 @@ test-suite TestBlockfrost-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      TestingCode
       Paths_TestBlockfrost
   hs-source-dirs:
       test
@@ -80,6 +83,7 @@ test-suite TestBlockfrost-test
     , base >=4.7 && <5
     , blockfrost-api
     , blockfrost-client
+    , hspec
     , http-client
     , http-conduit
     , network

@@ -43,6 +43,7 @@ console.log("mon addresse nami : " + addr);
 const addressDetails : AddressDetails = getAddressDetails (addr);
 const someHash: string = addressDetails.paymentCredential?.hash || "";
 
+
 // ici c'est le deadline 
 const someDate: Date = new Date("2023-08-19T16:00:00Z")
 const someDatePosix = BigInt(someDate.getTime());

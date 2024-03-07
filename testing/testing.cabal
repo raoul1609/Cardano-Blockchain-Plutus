@@ -24,7 +24,7 @@ maintainer:         elieraoulnet@gmail.com
 extra-source-files: CHANGELOG.md
 
 
--- common permet de specifier trucs communs, apres il faut l'importer a differents endroit
+-- common permet de specifier des trucs communs, apres il faut l'importer a differents endroit
 -- pour effectuer les tests quickcheck dans un projet construit avec cabal il faut : 
         -- ajouter QuickCheck dans les dependences 
         -- ajouter cabal-test-quickcheck specifier la version comme suit -> obligatoire 
@@ -35,6 +35,8 @@ common  common-all
     build-depends:    base ^>=4.14.3.0,
                       QuickCheck,
                       hspec,
+                      amqp,
+                      bytestring
                       --cabal-test-quickcheck >= 0.1,
                       --Cabal >= 3.0.1.0
     ghc-options:      -Wall  
@@ -86,5 +88,5 @@ test-suite myTests
     -- le module de testing 
     test-module:    TestingCode
     -- les modules utiles pour les test, ici c'est le module ou se trouve la fonction a tester 
-    other-modules:  TestFonctions
+    other-modules:  TestFonctions, PropertiesTest
        

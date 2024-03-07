@@ -39,6 +39,7 @@ extra-deps:
 - blockfrost-client-0.7.1.1
 - blockfrost-api-0.8.0.0
 - blockfrost-client-core-0.6.0.0
+- QuickCheck-2.14.3
 # - acme-missiles-0.3
 # - git: https://github.com/input-output-hk/plutus-pioneer-program.git
 #   commit: f1d0292211c6b8be145337bceb091f7514758ac4

@@ -729,11 +729,11 @@ obietivi da raggiungere :     -> Obietivo Raggiunto
  - difference entre minting policy et NFT
  - difference netre une tx de minting et une tx normale sur cardano
  
-le minting policy c'est unfonction (une sorte de validateur) qui te permet de creer un token, la tx de minting ne prend pas de datum a la difference d'une tx normal entre deux wallets.
+le minting policy c'est une fonction (une sorte de validateur) qui te permet de creer un token, la tx de minting ne prend pas de datum a la difference d'une tx normal entre deux wallets.
 
 apres avoir fait le homework1 et le homework2 voici mes donnees utilisees 
 
-pour obtenir le posixTime j'ai utilise la fonction getPosixTime de la libraire Data.Time.Clock.POSIX
+pour obtenir le posixTime j'ai utilise la fonction getPosixTime de la libraire Data.Time.Clock.POSIX et dans le code il faut import Plutus.V1.Ledger.Time pour construire l'element de type POSIXTime qu'on enverra a la fonction de serialisation.
 
 j'ai appelé ma fonction de serialisation  du homework1 parametré avec le pubKeyhash et le posixTime comme suit : 
 
@@ -742,6 +742,130 @@ saveHomework1Policy "91dbe3d70568b1ada2b0f059a8394dffb8fa632214c42c66f87fde95" (
 j'ai appelé ma fonction de serialisation du homework2 parametré avec le txOutRef et le tokenName comme suit : 
 
 saveHomework2Policy ( TxOutRef "049e0c9629ce921d8196a24ab5ee833ba9d1ee612c981b6b25dbea61c65efbcc" 0) "raoul"
+
+
+------------------------------------------====-----------------------------------------------
+
+j'ai redeployé mon script de minting du homework1Week05 avec des nouvelles donnees : 
+le hash de mon nami et un posixtime. 
+
+saveHomework1Policy "2bf3b747ec2983fe13b1f6844501f8447279360e38467e14b59f0eeb" (POSIXTime 1692454310)
+
+remarque1 : ici je deploie le script avec des parametres qui sont : le pubKeyhash de l'addresse du wallet et un posixtime. Mais dans le week06 on nous montre qui'il est possible de deployer un script parametré SANS PARAMETRES, et c'est dans le offchain code que les parametres sont envoyés au script avec la fonction applyParamsToScript de la librairie Lucid.
+
+en deployant le script avec les parametres deja, le offchain code se fait simplement. il faut ajouter addSigner en construisant la tx. 
+
+remarque2 : j'ai deployé le script du homework1 du week05 sans les parametres en  faisant comme  dans la video de lars.
+dans le offchain-code, je dois passer le pukeyhash et un deadline a la fonction applyParamsToScript pour generer mon script de minting.
+
+
+
+
+
+
+#-------------------------------= Week06 : testing smart-contract ------------------------#
+
+le deadline : un d est vu comme la borne superieure d'un interval c'est a dire que ]<-, d]
+before deadline : concerne toutes les valeurs de d appartenant à ]d, ->[
+after deadline : concerne toutes les valeurs de d appartenant à ]<- , d[ : je doutes fort que un deadline negatif ait un sens.
+
+la notion de before et after sont vues et definies en fonction du deadline.
+si je passe un temps x en parametre a ma fonction : 
+	before le deadline voudrait dire que le deadline est avant x ( deadline < x)
+	after le deadline voudrait dire que le deadline est apres x ( deadline > x )
+les fonctions de Plutus.Interval sont ecrites tenant compte de la logique où tout es vu en fonction du deadline.
+
+
+#--------------------------------homework Week06 : test apres coding du normalSpending -----------------#
+
+j'ai genéré l'addresse du script a tester : addr_test1wpapyc0muneylsr036jz5y7uf5x25ycl4j5vhvauv2nhqksuu88sr
+apres le query il n'y a pas de utxo dedans, cela voudrait dire que le testing ne change pas le contenu de l'addresse du script c'est pour cela que la librairie Plutus.Simple.Module utilise la monade d'etat State.
+
+
+#------------------------------  Week08 : private testnet -------------------#
+
+
+nb : le week7 parle de marlowe j'ai sauté ca pour passer au week08
+
+
+- a quoi va servir le private testnet ?? quel est l'advantage d'avoir un testnet privé ?? 
+- a quoi sert le withdrawl quand je construis une tx avec le cardano-cli ?
+- a quelle tx est il necessaire d'attacher le protocole parameters ?
+- pour quel type de tx doit on fournir le protocol parameter ?
+- c'est quoi le protocol parameter ?
+
+le stake validator est comme le minting script, ca ne prend pas le datum 
+
+dans le scriptPurpose, le spending sert a debloquer un utxo assit sur un script 
+
+le minting est utile lorsqu'on minte ou burn un token 
+
+le staking sur cardano depend de la notion d'epoques, les epoques se produisent apres chaque 5 jours, c'est trop long lorsqu'on est en plein developpement on a besoin de l'instantané, de la rapidité. l'alternative a cela est creé un private testnet.
+quand tu veux simuler le staking tu as besoin de mettre sur pieds un testnet privé pour t'epargner d'attendre durant 5 jours.
+
+withdraw = retrait 
+reward   = recommpense
+
+la notion de KES Key pour le staking sur cardano. le KES Key est un couple (operateur, cle) qui est utilise pour valider les neouds. la cle est generé apres une periode determinée.
+
+rmq : a chaque fois que tu redemarre le private testnet, les parametres sont reinitialises comme la valeur en lovelace contenue dans les addresses utilisés pour les exemples. surement il y a un script qui se lance au demarrage du private testnet
+
+
+
+
+
+###############------------------------ Appunti su Git --------------------------##############
+
+pour creer un nouveau depot git, il faut taper la commande git init, en etant dans le repertoire ou on veut que le depot se
+
+trouve.
+
+
+############----------------------- Appunti Monad Transformers -----------##########
+
+- quand on a deja deux effet monadiques dans une fonction, il faut deja pensé au monad transformer
+- les monad tranformers n'existent que pour les monades qui existent deja ! chaque monad qu'on a vu a son equivalent tranformer.
+
+
+
+
+------------------ remarques sur recherches des solutions de postgresql --------------------
+
+- quand on est deja connecté avec un utilisateur (postgres#) les commandes finissent par ;
+- la commande pour se connecter avec un autre utilisateur que le postgres par defaut
+	sudo -u user-name psql db-name
+	
+- la connection avec pgadmin : base de donnees de maintenance j'ai laissé a postgres 
+ l'utilisateur : j'ai mis nkalla, un utilisateur que j'ai creé avec le cli
+ 
+ - creer un utilisateur   : createuser --interactive --pwprompt
+ 
+ 
+ - parle de beaucoup de loi
+ - loi est elle egale a la logigue d'un algorithme ?
+ - esposé trop axé sur les maths 
+ - instance de classe implemente les semigroupes ?? -> explication ?
+ 
+ - les champs de requettes sont en minuscules
+ 
+ 
+ 
+ °################## INSTALLATION DE IHP ############## 90/12/2023 ##############
+ 
+ -  il faut installer nix   :  
+ voila le resultat de la commande d'installation de nix il faut coller ca dans .bashrc 
+ ". /home/nkalla/.nix-profile/etc/profile.d/nix.sh "
+ 
+ 
+
+
+
+
+
+
+
+
+
 
 
 

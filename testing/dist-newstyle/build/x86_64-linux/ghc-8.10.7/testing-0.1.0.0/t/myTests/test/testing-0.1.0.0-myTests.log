@@ -1,9 +1,24 @@
 Test suite myTests: RUNNING...
 
-test de kìla fonction addition 
+test about multiplication regarding recursive addition
+  la multiplication 2 5 est plus grand que 5 [✘]
+test de la fonction addition 
   (addition a b) >= a [✔]
+test about multiplication regarding recursive addition
+  la multiplication 4 -1 est plus grand que 5 [✔]
 
-Finished in 0.0001 seconds
-1 example, 0 failures
-Test suite myTests: PASS
+Failures:
+
+  tests/TestingCode.hs:38:17: 
+  1) test about multiplication regarding recursive addition la multiplication 2 5 est plus grand que 5
+       expected: True
+        but got: False
+
+  To rerun use: --match "/test about multiplication regarding recursive addition/la multiplication 2 5 est plus grand que 5/"
+
+Randomized with seed 2006303602
+
+Finished in 0.0007 seconds
+3 examples, 1 failure
+Test suite myTests: FAIL
 Test suite logged to: /home/nkalla/Documents/RaoulDocs/Cardano-Blockchain-Plutus/testing/dist-newstyle/build/x86_64-linux/ghc-8.10.7/testing-0.1.0.0/t/myTests/test/testing-0.1.0.0-myTests.log
